@@ -2,10 +2,7 @@
 import requests
 import pandas as pd
 import numpy as np
-from datetime import datetime
 import streamlit as st
-
-
 
 # Select Coin
 selectCoin = st.sidebar.radio(
@@ -31,7 +28,9 @@ elif chooseCurr == "INR":
 else:
     curr = "usd"
 
-st.title(coinid.title()+" Daily Prices"+f" in {curr.upper()}")
+curr = curr.upper()
+
+st.title(coinid.title()+" Daily Prices")
 
 days = st.slider("Number of Days:",1,365, 31,1)
 
@@ -43,20 +42,20 @@ r = requests.get(f'https://api.coingecko.com/api/v3/coins/{coinid}/market_chart'
 price_list = r.json()['prices']
 
 df = pd.DataFrame(price_list[:len(price_list)-1], 
-                  columns =['Date', 'Price']) 
+                  columns =['Date', curr]) 
 
-df.Date = df.Date.apply(lambda t : datetime.utcfromtimestamp(t/1000).date())
-df.Price = df.Price.apply(lambda p : round(p,0))
+df.Date = pd.to_datetime(df.Date, unit='ms')
+df[curr] = df[curr].apply(lambda p : round(p,0))
 
 df.set_index(df.Date, inplace=True)
 df.drop('Date',axis=1,inplace=True)
 
 st.line_chart(df, use_container_width = True)
 
-st.subheader(f"Some Insights during {df.head(1).index[0]} to {df.tail(1).index[0]}:")
+periodStart = df.head(1).index[0].date().strftime('%m/%d/%Y')
+periodEnd = df.tail(1).index[0].date().strftime('%m/%d/%Y')
 
-st.text(f"Average Price was {np.round(np.mean(df.Price),2)} {curr.upper()}")
+st.subheader(f"Some Insights during {periodStart} to {periodEnd}:")
 
-maxPriceDay = df[df.Price == np.max(df.Price)].index[0]
-
-st.text(f"Maximum Price: {np.round(np.max(df.Price),2)}, was sold on {maxPriceDay}")
+st.text(f"Average Price is {np.round(np.mean(df[curr]),2)} {curr}")
+st.text(f"Maximum Price is {np.round(np.max(df[curr]),2)} {curr}")
